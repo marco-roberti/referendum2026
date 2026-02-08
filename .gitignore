@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+
+# Coverage and pytest
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Generated data and plots (project root)
+sondaggi.csv
+sondaggi_clean.csv
+*.png

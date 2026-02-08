@@ -1,0 +1,22 @@
+# Conda environment for referendum2026
+# Create with: conda env create -f environment.yml
+# Activate with: conda activate referendum2026
+
+name: referendum2026
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.12
+  - matplotlib
+  - numpy
+  - pandas
+  - seaborn
+  - scipy
+  - statsmodels
+  - babel
+  - lxml
+  - requests
+  - pytest
+  - pytest-cov
+  - ruff

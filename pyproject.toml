@@ -1,0 +1,36 @@
+[project]
+name = "referendum2026"
+version = "0.1.0"
+description = "Referendum 2026 polling analysis with LOESS"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "matplotlib",
+    "numpy",
+    "pandas",
+    "seaborn",
+    "scipy",
+    "babel",
+    "lxml",
+    "requests",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "pytest-cov", "ruff"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "-v"
+markers = []
+
+[tool.coverage.run]
+source = ["sondaggi"]
+omit = ["sondaggi/__main__.py"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+
+[tool.ruff.format]
