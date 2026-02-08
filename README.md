@@ -1,6 +1,6 @@
-# referendum2026
+# Referendum 2026 — Sondaggi
 
-Referendum 2026 polling analysis: fetch Italian referendum polls from Wikipedia, clean the data, and plot LOESS curves for Sì/No.
+**Italian referendum 2026 polling:** fetch poll tables from Wikipedia, clean the data (Italian locale, optional merge by date), and plot LOESS curves for Sì/No.
 
 ## Running
 
