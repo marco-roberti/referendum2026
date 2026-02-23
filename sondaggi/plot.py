@@ -20,7 +20,7 @@ def plot_loess(df: pd.DataFrame, frac: float, output_path: Path | None = None) -
         ("yes_norm", "Sì", ("green", "darkgreen")),
         ("no_norm", "No", ("red", "darkred")),
     ]:
-        sz = 30 + sample_sizes / sample_sizes.max() * 100 if use_w else 50
+        sz = sample_sizes / sample_sizes.max() * 80 if use_w else 50
         ax.scatter(
             df["date"], df[col], alpha=0.4, s=sz, label=f"{label} (raw)", color=sc
         )
@@ -28,7 +28,7 @@ def plot_loess(df: pd.DataFrame, frac: float, output_path: Path | None = None) -
         ax.plot(
             t,
             vals,
-            linewidth=2.5,
+            linewidth=1.5,
             label=f"{label} ({'weighted ' if use_w else ''}LOESS, frac={frac:.2f})",
             color=lc,
         )
