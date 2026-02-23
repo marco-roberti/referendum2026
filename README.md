@@ -33,6 +33,12 @@ python -m sondaggi --frac 0.5 -o plot.png
 
 This downloads the table from Wikipedia, writes `sondaggi.csv` and `sondaggi_clean.csv`, and saves the plot.
 
+The image currently on [Wikipedia](https://commons.wikimedia.org/wiki/File:Sondaggi_referendum_costituzionale_italiano_2026_-_weighted_LOESS.png) is typically generated with:
+
+```bash
+python -m sondaggi -o referendum2026-lowess-YYYYMMDD.png
+```
+
 ---
 
 ## Developing
