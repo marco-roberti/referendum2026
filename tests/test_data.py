@@ -1,5 +1,6 @@
 """Tests for data module: parsing, cleaning, merge, prepare_data."""
 
+import warnings
 from math import nan
 
 import numpy as np
@@ -29,8 +30,16 @@ TO_NUMBER_CASES = [
 
 TO_NUMBER_INVALID = ["nan", "N.D.", "abc"]
 
-NORM_DATE_CASES = [
+# Ref-stripping: Wikipedia-style [1]..[N] removed before parsing
+STRIP_WIKI_REF_CASES = [
     ("30 settembre 2025[108]", "30 settembre 2025"),
+    ("15 gennaio 2026[1]", "15 gennaio 2026"),
+    ("text[1] and [2] more", "text and more"),
+    ("[3] leading", "leading"),
+    ("trailing[99]", "trailing"),
+]
+
+NORM_DATE_CASES = [
     ("15 gennaio 2026", "15 gennaio 2026"),
     ("30 ottobre 2025 – Approvazione definitiva", "30 ottobre 2025"),
 ]
@@ -70,8 +79,25 @@ class TestToNumber:
         assert _is_nan(data._to_number(s))
 
 
+class TestStripWikiRefs:
+    """_strip_wiki_refs / _strip_wikipedia_refs: remove [1]..[N] everywhere."""
+
+    @pytest.mark.parametrize("s,expected", STRIP_WIKI_REF_CASES)
+    def test_strip_wiki_refs_scalar(self, s, expected):
+        assert data._strip_wiki_refs(s) == expected
+
+    def test_strip_wiki_refs_na_passthrough(self):
+        assert pd.isna(data._strip_wiki_refs(np.nan))
+
+    def test_strip_wikipedia_refs_on_df(self):
+        df = pd.DataFrame({"A": ["30 settembre 2025[108]", "x[1]"], "B": [1, 2]})
+        data._strip_wikipedia_refs(df)
+        assert df["A"].tolist() == ["30 settembre 2025", "x"]
+        assert df["B"].tolist() == [1, 2]
+
+
 class TestNormDateCell:
-    """_norm_date_cell: strip citations and keep d MMMM yyyy."""
+    """_norm_date_cell: keep first 3 tokens (d MMMM yyyy); refs stripped earlier."""
 
     @pytest.mark.parametrize("s,expected", NORM_DATE_CASES)
     def test_from_cases(self, s, expected):
@@ -125,5 +151,12 @@ class TestPrepareData:
         assert len(with_merge) <= len(no_merge)
 
     def test_filters_out_bad_rows(self, raw_df_bad):
-        result = data.prepare_data(raw_df_bad, merge=False)
+        with pytest.warns(Warning, match="Row 1:"):
+            result = data.prepare_data(raw_df_bad, merge=False)
         assert len(result) == 0
+
+    def test_no_warning_when_all_rows_valid(self, raw_df):
+        with warnings.catch_warnings(record=True) as record:
+            warnings.simplefilter("always", Warning)
+            data.prepare_data(raw_df, merge=False)
+        assert len(record) == 0

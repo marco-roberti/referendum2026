@@ -2,6 +2,7 @@
 
 import locale
 import re
+import warnings
 from math import nan
 
 import numpy as np
@@ -16,6 +17,16 @@ _IT_MONTHS = "|".join(
 )
 _ITALIAN_DATE_RE = re.compile(rf"^\d{{1,2}}\s+({_IT_MONTHS})\s+\d{{4}}$")
 _ITALIAN_NUMBER_RE = re.compile(r"^\d{1,3}(?:\.\d{3})*(?:,\d+)?$|^\d+(?:,\d+)?$")
+_WIKI_REF_RE = re.compile(r"\[[1-9][0-9]*\]")
+
+
+def _strip_wiki_refs(s: str | float):
+    """Remove Wikipedia-style citation refs [1]..[N] and collapse whitespace."""
+    if pd.isna(s):
+        return s
+    t = _WIKI_REF_RE.sub("", str(s))
+    return re.sub(r"\s+", " ", t).strip()
+
 
 CLEAN_COLUMNS = [
     "date",
@@ -45,10 +56,16 @@ def _to_number(s: str | float):
     )
 
 
+def _strip_wikipedia_refs(df: pd.DataFrame) -> None:
+    """Remove Wikipedia citation refs from all object columns (in place)."""
+    for col in df.select_dtypes(include=["object"]).columns:
+        df[col] = df[col].apply(_strip_wiki_refs)
+
+
 def _norm_date_cell(s: str | float) -> str | float:
     if pd.isna(s):
         return s
-    head = str(s).split("[")[0].strip()
+    head = str(s).strip()
     p = head.split()[:3]
     return " ".join(p) if len(p) == 3 else head
 
@@ -105,6 +122,7 @@ def merge_same_date(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def prepare_data(df: pd.DataFrame, merge: bool = False) -> pd.DataFrame:
+    _strip_wikipedia_refs(df)
     mask = (
         df["Data pubblicazione"]
         .astype(str)
@@ -112,6 +130,9 @@ def prepare_data(df: pd.DataFrame, merge: bool = False) -> pd.DataFrame:
         & df["Sì"].astype(str).str.contains("%", na=False)
         & df["No"].astype(str).str.contains("%", na=False)
     )
+    for idx in df.index[~mask]:
+        row = df.loc[idx, ["Data pubblicazione", "Istituto", "Sì", "No"]]
+        warnings.warn(f"Row {idx + 1}: {row.tolist()}", Warning, stacklevel=2)
     df = df[mask].copy()
     _clean_table(df)
     df["date"] = df["Data pubblicazione"].apply(_to_date)
@@ -123,8 +144,12 @@ def prepare_data(df: pd.DataFrame, merge: bool = False) -> pd.DataFrame:
     df["error_margin"] = df["Margine di errore"].apply(_to_number)
     df["istituto"] = df["Istituto"].astype(str)
     df["yes_norm"], df["no_norm"] = yes / tot * 100, no / tot * 100
+    valid = df[["date", "yes_norm", "no_norm"]].notna().all(axis=1)
+    for idx in df.index[~valid]:
+        row = df.loc[idx, ["Data pubblicazione", "Istituto", "Sì", "No"]]
+        warnings.warn(f"Row {idx + 1}: {row.tolist()}", Warning, stacklevel=2)
     out = (
-        df[df[["date", "yes_norm", "no_norm"]].notna().all(axis=1)]
+        df[valid]
         .sort_values("date")
         .reset_index(drop=True)[CLEAN_COLUMNS]
     )
