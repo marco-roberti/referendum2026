@@ -36,7 +36,7 @@ This downloads the table from Wikipedia, writes `sondaggi.csv` and `sondaggi_cle
 The image currently on [Wikipedia](https://commons.wikimedia.org/wiki/File:Sondaggi_referendum_costituzionale_italiano_2026_-_weighted_LOESS.png) has been generated with:
 
 ```bash
-python -m sondaggi -o referendum2026-lowess-YYYYMMDD.png
+python -m sondaggi --frac .5 -o referendum2026-lowess-YYYYMMDD.png
 ```
 
 ---
