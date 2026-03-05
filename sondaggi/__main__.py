@@ -33,7 +33,6 @@ if __name__ == "__main__":
     parser.add_argument(
         "--start-date",
         type=date.fromisoformat,
-        default=None,
         help="Consider only polls from this date (YYYY-MM-DD) onwards",
     )
     main(parser.parse_args())
