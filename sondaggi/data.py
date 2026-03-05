@@ -3,6 +3,7 @@
 import locale
 import re
 import warnings
+from datetime import date
 from math import nan
 
 import numpy as np
@@ -58,7 +59,7 @@ def _to_number(s: str | float):
 
 def _strip_wikipedia_refs(df: pd.DataFrame) -> None:
     """Remove Wikipedia citation refs from all object columns (in place)."""
-    for col in df.select_dtypes(include=["object"]).columns:
+    for col in df.select_dtypes(include=["object", "string"]).columns:
         df[col] = df[col].apply(_strip_wiki_refs)
 
 
@@ -97,6 +98,13 @@ def _wavg(g: pd.DataFrame, w: pd.Series, c: str):
     return (g[c] * w).sum() / w.sum() if w.sum() > 0 else g[c].mean()
 
 
+def _warn_rows(df: pd.DataFrame) -> None:
+    for _, row in df.iterrows():
+        if len(set(row.values)) <= 1:
+            continue
+        warnings.warn(str(row.to_dict()), Warning, stacklevel=2)
+
+
 def merge_same_date(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty:
         return df
@@ -121,7 +129,11 @@ def merge_same_date(df: pd.DataFrame) -> pd.DataFrame:
     )
 
 
-def prepare_data(df: pd.DataFrame, merge: bool = False) -> pd.DataFrame:
+def prepare_data(
+    df: pd.DataFrame,
+    merge: bool = False,
+    start_date: date | None = None,
+) -> pd.DataFrame:
     _strip_wikipedia_refs(df)
     mask = (
         df["Data pubblicazione"]
@@ -130,27 +142,25 @@ def prepare_data(df: pd.DataFrame, merge: bool = False) -> pd.DataFrame:
         & df["Sì"].astype(str).str.contains("%", na=False)
         & df["No"].astype(str).str.contains("%", na=False)
     )
-    for idx in df.index[~mask]:
-        row = df.loc[idx, ["Data pubblicazione", "Istituto", "Sì", "No"]]
-        warnings.warn(f"Row {idx + 1}: {row.tolist()}", Warning, stacklevel=2)
+    _warn_rows(df[~mask])
     df = df[mask].copy()
     _clean_table(df)
+
     df["date"] = df["Data pubblicazione"].apply(_to_date)
+    if start_date is not None:
+        cutoff = pd.Timestamp(start_date)
+        df = df[df["date"] >= cutoff]
+    df["error_margin"] = df["Margine di errore"].apply(_to_number)
+    df["istituto"] = df["Istituto"].astype(str)
+
     yes, no = df["Sì"].apply(_to_number), df["No"].apply(_to_number)
     tot = yes + no
     resp = tot + np.nan_to_num(df["Indeciso"].apply(_to_number), nan=0)
     camp = df["Campione"].apply(_to_number)
     df["sample_size"] = np.where(resp > 0, camp * tot / resp, camp)
-    df["error_margin"] = df["Margine di errore"].apply(_to_number)
-    df["istituto"] = df["Istituto"].astype(str)
     df["yes_norm"], df["no_norm"] = yes / tot * 100, no / tot * 100
+
     valid = df[["date", "yes_norm", "no_norm"]].notna().all(axis=1)
-    for idx in df.index[~valid]:
-        row = df.loc[idx, ["Data pubblicazione", "Istituto", "Sì", "No"]]
-        warnings.warn(f"Row {idx + 1}: {row.tolist()}", Warning, stacklevel=2)
-    out = (
-        df[valid]
-        .sort_values("date")
-        .reset_index(drop=True)[CLEAN_COLUMNS]
-    )
+    _warn_rows(df[~valid])
+    out = df[valid].sort_values("date").reset_index(drop=True)[CLEAN_COLUMNS]
     return merge_same_date(out) if merge else out

@@ -1,6 +1,7 @@
 """Tests for data module: parsing, cleaning, merge, prepare_data."""
 
 import warnings
+from datetime import date
 from math import nan
 
 import numpy as np
@@ -107,6 +108,24 @@ class TestNormDateCell:
         assert pd.isna(data._norm_date_cell(np.nan))
 
 
+class TestWarnRows:
+    """_warn_rows: warns per row with >1 distinct value; skips uniform rows."""
+
+    def test_skips_row_with_single_value(self):
+        """Row where all values are equal does not emit a warning (continue branch)."""
+        df = pd.DataFrame([{"a": 1, "b": 1, "c": 1}])
+        with warnings.catch_warnings(record=True) as record:
+            warnings.simplefilter("always", Warning)
+            data._warn_rows(df)
+        assert len(record) == 0
+
+    def test_warns_row_with_mixed_values(self):
+        """Row with distinct values emits one warning."""
+        df = pd.DataFrame([{"a": 1, "b": 2}])
+        with pytest.warns(Warning, match="'a': 1"):
+            data._warn_rows(df)
+
+
 class TestMergeSameDate:
     """merge_same_date aggregates rows by date."""
 
@@ -151,7 +170,7 @@ class TestPrepareData:
         assert len(with_merge) <= len(no_merge)
 
     def test_filters_out_bad_rows(self, raw_df_bad):
-        with pytest.warns(Warning, match="Row 1:"):
+        with pytest.warns(Warning, match="not a date"):
             result = data.prepare_data(raw_df_bad, merge=False)
         assert len(result) == 0
 
@@ -160,3 +179,9 @@ class TestPrepareData:
             warnings.simplefilter("always", Warning)
             data.prepare_data(raw_df, merge=False)
         assert len(record) == 0
+
+    def test_start_date_filters_rows(self, raw_df):
+        """start_date filters to rows on or after that date (covers branch)."""
+        result = data.prepare_data(raw_df, merge=False, start_date=date(2025, 1, 1))
+        assert len(result) >= 1
+        assert (result["date"] >= pd.Timestamp("2025-01-01")).all()

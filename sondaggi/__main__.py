@@ -1,6 +1,7 @@
 """Entry point for python -m sondaggi."""
 
 import argparse
+from datetime import date
 from pathlib import Path
 
 import pandas as pd
@@ -15,7 +16,9 @@ CSV_CLEAN = Path("sondaggi_clean.csv")
 
 def main(args: argparse.Namespace) -> None:
     download_sondaggi(CSV_RAW)
-    df = prepare_data(pd.read_csv(CSV_RAW), merge=args.merge)
+    df = prepare_data(
+        pd.read_csv(CSV_RAW), merge=args.merge, start_date=args.start_date
+    )
     df.to_csv(CSV_CLEAN, index=False)
     plot_loess(df, args.frac, args.output)
 
@@ -26,5 +29,11 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--output", type=Path, default=None)
     parser.add_argument(
         "--merge", action="store_true", help="Merge polls on the same date"
+    )
+    parser.add_argument(
+        "--start-date",
+        type=date.fromisoformat,
+        default=None,
+        help="Consider only polls from this date (YYYY-MM-DD) onwards",
     )
     main(parser.parse_args())
