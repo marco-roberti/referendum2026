@@ -8,6 +8,9 @@ import seaborn as sns
 
 from .loess import loess
 
+SCATTER_SIZE_MAX = 60
+SCATTER_SIZE_DEFAULT = 30
+
 
 def plot_loess(df: pd.DataFrame, frac: float, output_path: Path | None = None) -> None:
     sns.set_style("whitegrid")
@@ -20,7 +23,11 @@ def plot_loess(df: pd.DataFrame, frac: float, output_path: Path | None = None) -
         ("yes_norm", "Sì", ("green", "darkgreen")),
         ("no_norm", "No", ("red", "darkred")),
     ]:
-        sz = sample_sizes / sample_sizes.max() * 80 if use_w else 50
+        sz = (
+            sample_sizes / sample_sizes.max() * SCATTER_SIZE_MAX
+            if use_w
+            else SCATTER_SIZE_DEFAULT
+        )
         ax.scatter(
             df["date"], df[col], alpha=0.4, s=sz, label=f"{label} (raw)", color=sc
         )
